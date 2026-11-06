@@ -1,0 +1,23 @@
+# Переменные читаются из .env рядом с этим файлом (шаблон: .env.example).
+# Без .env используются значения по умолчанию.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: crm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crm}
+      POSTGRES_USER: ${POSTGRES_USER:-crm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crm}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - crm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # $$ — экранирование для compose: переменные раскрываются внутри контейнера
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  crm-pgdata:

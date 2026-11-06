@@ -20,6 +20,17 @@ make psql    # консоль БД
 Проверка: http://localhost:8080/actuator/health — `{"status":"UP"}`.
 Swagger UI: http://localhost:8080/swagger-ui.html.
 
+## Как посмотреть API
+
+| Способ | Команда / ссылка | Когда удобен |
+|---|---|---|
+| Swagger UI контракта локально | `make swagger` → http://localhost:8082 (+ `make mock` на 4010 для Try-it-out) | Разработка, не нужен клон бэкенда — только папка docs/openapi и Docker |
+| Swagger UI по ссылке (GitHub Pages) | `https://<owner>.github.io/autoservice-crm/openapi/` | Смотреть без клона и Docker; Try-it-out работает против локального мока, если он запущен |
+| Swagger живого бэкенда | http://localhost:8080/swagger-ui.html | Когда эндпоинты реализованы; должен совпадать с контрактом |
+
+Страница для Pages — `docs/openapi/index.html` (Swagger UI из CDN, подхватывает `crm-api.yaml` рядом).
+Pages включается один раз владельцем: **Settings → Pages → Branch: `main`, папка `/docs` → Save**.
+
 ## Конфигурация
 
 Параметры docker compose (имя БД, пользователь, пароль, порт) читаются из `.env`

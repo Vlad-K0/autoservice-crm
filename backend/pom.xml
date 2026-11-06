@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- Перед стартом проверить свежую патч-версию 3.5.x:
+             https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
+        <version>3.5.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.autoservice</groupId>
+    <artifactId>crm-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>autoservice-crm backend</name>
+
+    <modules>
+        <module>crm-common</module>
+        <module>crm-clients</module>
+        <module>crm-catalog</module>
+        <module>crm-inventory</module>
+        <module>crm-appointments</module>
+        <module>crm-workorders</module>
+        <module>crm-billing</module>
+        <module>crm-documents</module>
+        <module>crm-notifications</module>
+        <module>crm-api</module>
+    </modules>
+
+    <properties>
+        <java.version>21</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <springdoc.version>2.8.5</springdoc.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Внутренние модули (версии только здесь) -->
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-clients</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-catalog</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-inventory</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-appointments</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-workorders</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-billing</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-documents</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.autoservice</groupId>
+                <artifactId>crm-notifications</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- Сторонние зависимости, не управляемые spring-boot-starter-parent -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

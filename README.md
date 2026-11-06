@@ -34,6 +34,8 @@ make run   # запустить backend (crm-api)
 
 ## Документация
 
+- [docs/backlog.md](docs/backlog.md) — пул задач и прогресс по этапам
+- [docs/tasks/](docs/tasks) — детальные формулировки задач (формат GitHub issue)
 - [docs/adr](docs/adr) — архитектурные решения (ADR)
 - [docs/development.md](docs/development.md) — настройка окружения с нуля
 - [CONTRIBUTING.md](CONTRIBUTING.md) — процесс работы: ветки, PR, Definition of Done

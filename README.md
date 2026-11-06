@@ -35,6 +35,7 @@ make run   # запустить backend (crm-api)
 ## Документация
 
 - [docs/backlog.md](docs/backlog.md) — пул задач и прогресс по этапам
+- [docs/openapi/crm-api.yaml](docs/openapi/crm-api.yaml) — контракт REST API (контракт-first, ADR-0004)
 - [docs/tasks/](docs/tasks) — детальные формулировки задач (формат GitHub issue)
 - [docs/adr](docs/adr) — архитектурные решения (ADR)
 - [docs/development.md](docs/development.md) — настройка окружения с нуля

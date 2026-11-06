@@ -24,6 +24,7 @@ psql: ## Консоль psql внутри контейнера
 
 run: ## Запустить backend (crm-api); подключение к БД — из .env / дефолтов
 	cd backend && \
+	mvn -q -DskipTests install && \
 	SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:$(POSTGRES_PORT)/$(POSTGRES_DB) \
 	SPRING_DATASOURCE_USERNAME=$(POSTGRES_USER) \
 	SPRING_DATASOURCE_PASSWORD=$(POSTGRES_PASSWORD) \

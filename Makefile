@@ -37,3 +37,9 @@ mock: ## Мок-сервер API из контракта (Prism, http://localhos
 	docker run --rm --name crm-mock -p 4010:4010 \
 		-v $(PWD)/docs/openapi:/spec:ro \
 		stoplight/prism:4 mock -h 0.0.0.0 /spec/crm-api.yaml
+
+swagger: ## Swagger UI для контракта (http://localhost:8082; Try-it-out против make mock)
+	docker run --rm --name crm-swagger -p 8082:8080 \
+		-e SWAGGER_JSON=/spec/crm-api.yaml \
+		-v $(PWD)/docs/openapi:/spec:ro \
+		swaggerapi/swagger-ui:latest

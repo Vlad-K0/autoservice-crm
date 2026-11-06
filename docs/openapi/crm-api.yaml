@@ -1,0 +1,448 @@
+openapi: 3.0.3
+info:
+  title: autoservice-crm API
+  version: 0.1.0
+  description: |
+    Контракт REST API CRM автосервиса. Этап M1 — ядро CRM (клиенты, автомобили,
+    владение, история обслуживаний).
+
+    **Соглашения контракта (не менять без ADR):**
+    - деньги — `int64` в копейках (minor units), никогда float;
+    - даты — `date` (ISO 8601), моменты — `date-time` в UTC;
+    - пагинация: `page` с нуля, `size` по умолчанию 20, максимум 100;
+    - ошибки — RFC 7807, `application/problem+json`;
+    - сервер хранит и ждёт в запросах VIN и госномер нормализованными:
+      UPPER CASE, без пробелов; телефоны — только цифры (например `79991234567`);
+    - изменение контракта — только через PR в этот файл с ревью обоих (CONTRIBUTING).
+
+    **Серверы:** 8080 — живой backend; 4010 — мок из этого файла (`make mock`),
+    чтобы фронтенд работал без бэкенда.
+servers:
+  - url: http://localhost:8080
+    description: Локальный backend (make run)
+  - url: http://localhost:4010
+    description: Мок-сервер из контракта (make mock)
+tags:
+  - name: clients
+    description: Клиенты (физлица и юрлица)
+  - name: vehicles
+    description: Автомобили и история обслуживаний
+
+paths:
+  /api/clients:
+    get:
+      tags: [clients]
+      summary: Список клиентов (поиск + пагинация)
+      parameters:
+        - $ref: '#/components/parameters/ClientQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Страница клиентов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfClients'
+    post:
+      tags: [clients]
+      summary: Создать клиента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateRequest'
+      responses:
+        '201':
+          description: Клиент создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /api/clients/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EntityId'
+    get:
+      tags: [clients]
+      summary: Карточка клиента
+      responses:
+        '200':
+          description: Клиент
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [clients]
+      summary: Обновить клиента (полная замена)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClientUpdateRequest' }
+      responses:
+        '200':
+          description: Обновлённый клиент
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Client' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [clients]
+      summary: Удалить клиента
+      description: Возвращает 409, если у клиента есть связанная история (авто, наряды).
+      responses:
+        '204': { description: Удалён }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/clients/{id}/vehicles:
+    parameters:
+      - $ref: '#/components/parameters/EntityId'
+    get:
+      tags: [clients, vehicles]
+      summary: Автомобили клиента
+      description: Возвращает авто, которыми клиент владеет сейчас (активные периоды).
+      responses:
+        '200':
+          description: Список авто
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Vehicle' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [clients, vehicles]
+      summary: Привязать авто клиенту (период владения)
+      description: |
+        Авто должно существовать (создать — POST /api/vehicles).
+        Текущее владение этим авто, если было, закрывается датой validFrom.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OwnershipCreateRequest' }
+      responses:
+        '201':
+          description: Период владения создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VehicleOwnership' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/vehicles:
+    get:
+      tags: [vehicles]
+      summary: Список авто (поиск + пагинация)
+      parameters:
+        - $ref: '#/components/parameters/VehicleQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Страница авто
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PageOfVehicles' }
+    post:
+      tags: [vehicles]
+      summary: Создать автомобиль
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleCreateRequest' }
+      responses:
+        '201':
+          description: Авто создано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Авто с таким VIN уже существует
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /api/vehicles/{id}:
+    parameters:
+      - $ref: '#/components/parameters/EntityId'
+    get:
+      tags: [vehicles]
+      summary: Карточка авто
+      responses:
+        '200':
+          description: Авто
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [vehicles]
+      summary: Обновить авто (полная замена)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleUpdateRequest' }
+      responses:
+        '200':
+          description: Обновлённое авто
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Vehicle' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [vehicles]
+      summary: Удалить авто
+      description: Возвращает 409, если у авто есть история (владение, наряды).
+      responses:
+        '204': { description: Удалено }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/vehicles/{id}/service-history:
+    get:
+      tags: [vehicles]
+      summary: История обслуживаний авто (лента)
+      description: |
+        Лента заездов на уровне авто (не клиента). На этапе M1 всегда пустая —
+        формат фиксируется сейчас, наполняется заказ-нарядами на этапе M2.
+      parameters:
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Лента событий
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceHistory' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    ClientQuery:
+      name: query
+      in: query
+      description: 'Поиск: часть имени, точный телефон (хвостовое совпадение по последним цифрам) или email.'
+      schema: { type: string }
+    VehicleQuery:
+      name: query
+      in: query
+      description: 'Поиск: точный VIN, точный нормализованный госномер или "марка модель".'
+      schema: { type: string }
+
+  responses:
+    NotFound:
+      description: Не найдено
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ValidationError:
+      description: Ошибка валидации (400)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Конфликт (409) — коллизия данных
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Client:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        type:
+          type: string
+          enum: [PERSON, COMPANY]
+        name:
+          type: string
+          description: ФИО (PERSON) или название организации (COMPANY)
+        phones:
+          type: array
+          items: { $ref: '#/components/schemas/ClientPhone' }
+        email: { type: string, format: email }
+        address: { type: string }
+        acquisitionChannel: { type: string, description: Канал привлечения }
+        marketingConsent: { type: boolean, description: Согласие на рассылки }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ClientPhone:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        phone:
+          type: string
+          description: Только цифры, например 79991234567
+          pattern: '^\d{5,15}$'
+        isPrimary: { type: boolean }
+
+    ClientCreateRequest:
+      type: object
+      required: [type, name]
+      properties:
+        type: { type: string, enum: [PERSON, COMPANY] }
+        name: { type: string, minLength: 2, maxLength: 200 }
+        phones:
+          type: array
+          items:
+            type: object
+            required: [phone]
+            properties:
+              phone: { type: string, pattern: '^\d{5,15}$' }
+              isPrimary: { type: boolean, default: false }
+        email: { type: string, format: email }
+        address: { type: string }
+        acquisitionChannel: { type: string }
+        marketingConsent: { type: boolean, default: false }
+        notes: { type: string }
+
+    ClientUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/ClientCreateRequest'
+
+    Vehicle:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        vin:
+          type: string
+          nullable: true
+          description: 17 символов, UPPER CASE; может отсутствовать
+          pattern: '^[A-HJ-NPR-Z0-9]{17}$'
+        licensePlate:
+          type: string
+          description: Нормализованный госномер — UPPER CASE, без пробелов
+          maxLength: 15
+        make: { type: string, description: Марка }
+        model: { type: string, description: Модель }
+        generation: { type: string }
+        year: { type: integer, minimum: 1900, maximum: 2100 }
+        bodyType: { type: string }
+        engine: { type: string, description: 'Объём/код двигателя, например "1.6 BSE"' }
+        fuelType: { type: string, enum: [PETROL, DIESEL, HYBRID, ELECTRIC, GAS, OTHER] }
+        transmission: { type: string, enum: [MANUAL, AUTOMATIC, CVT, OTHER] }
+        lastMileage: { type: integer, format: int64, nullable: true, description: Последний известный пробег, км }
+        category: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    VehicleCreateRequest:
+      type: object
+      required: [licensePlate]
+      properties:
+        vin: { type: string, nullable: true, pattern: '^[A-HJ-NPR-Z0-9]{17}$' }
+        licensePlate: { type: string, minLength: 3, maxLength: 15 }
+        make: { type: string }
+        model: { type: string }
+        generation: { type: string }
+        year: { type: integer, minimum: 1900, maximum: 2100 }
+        bodyType: { type: string }
+        engine: { type: string }
+        fuelType: { type: string, enum: [PETROL, DIESEL, HYBRID, ELECTRIC, GAS, OTHER] }
+        transmission: { type: string, enum: [MANUAL, AUTOMATIC, CVT, OTHER] }
+        lastMileage: { type: integer, format: int64, nullable: true }
+        category: { type: string }
+
+    VehicleUpdateRequest:
+      allOf:
+        - $ref: '#/components/schemas/VehicleCreateRequest'
+
+    OwnershipCreateRequest:
+      type: object
+      required: [vehicleId]
+      properties:
+        vehicleId: { type: integer, format: int64 }
+        validFrom: { type: string, format: date, description: По умолчанию — сегодня }
+        validUntil: { type: string, format: date, nullable: true }
+
+    VehicleOwnership:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        clientId: { type: integer, format: int64 }
+        vehicleId: { type: integer, format: int64 }
+        validFrom: { type: string, format: date }
+        validUntil: { type: string, format: date, nullable: true }
+
+    PageOfClients:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/Client' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    PageOfVehicles:
+      type: object
+      properties:
+        content:
+          type: array
+          items: { $ref: '#/components/schemas/Vehicle' }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+
+    ServiceHistory:
+      type: object
+      properties:
+        vehicleId: { type: integer, format: int64 }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ServiceHistoryItem' }
+
+    ServiceHistoryItem:
+      type: object
+      description: Событие ленты. На этапе M1 не возвращается (лента пустая).
+      properties:
+        date: { type: string, format: date }
+        type: { type: string, enum: [WORK_ORDER, APPOINTMENT, REMINDER] }
+        refId: { type: integer, format: int64 }
+        title: { type: string }
+        mileage: { type: integer, format: int64, nullable: true }
+        status: { type: string, nullable: true }
+        amountMinor: { type: integer, format: int64, nullable: true, description: Сумма в копейках }
+
+    Problem:
+      type: object
+      description: Ошибка в формате RFC 7807
+      properties:
+        type: { type: string, description: URI типа ошибки }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        errors:
+          type: array
+          description: Детали по полям (для 400)
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

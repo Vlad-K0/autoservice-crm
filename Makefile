@@ -32,3 +32,8 @@ run: ## Запустить backend (crm-api); подключение к БД —
 
 test: ## Прогнать тесты backend
 	cd backend && mvn verify
+
+mock: ## Мок-сервер API из контракта (Prism, http://localhost:4010)
+	docker run --rm --name crm-mock -p 4010:4010 \
+		-v $(PWD)/docs/openapi:/spec:ro \
+		stoplight/prism:4 mock -h 0.0.0.0 /spec/crm-api.yaml
